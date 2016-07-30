@@ -1,0 +1,386 @@
+<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+
+<script src="entities.js"></script>
+<script src="text_box.js"></script>
+<script src="events.js"></script>
+<script>
+var ctx  =  document.getElementById("ctx").getContext("2d");
+ctx.font = '30px Arial'
+var TILE_SIZE = 24;  //pixel size of a tile on browser.  IT CHANGES BASED ON THE MAP!
+var NUMBER_OF_TILES_X =  50; //50;  16 is other
+var NUMBER_OF_TILES_Y =  32 //32;  16 is other
+var CANVAS_HEIGHT = 500;
+var TEXT_BOX_HEIGHT = 125;
+var HEIGHT = CANVAS_HEIGHT - TEXT_BOX_HEIGHT;
+var WIDTH = 500;
+var map_height = NUMBER_OF_TILES_Y* TILE_SIZE;
+var startingXCoord = 0; // Starts at 0,0
+var startingYCoord = 2; // Y starts at the top not bottom.  Starts at 0,0
+
+
+var paused = false;
+var gravity = {
+	gravityOn : true,
+	baseFallSpeed: 0,
+	currentStrength : 1,
+	isJumping : true,
+	jumpStrength : 0,
+	baseJumpStrength : 15
+}
+
+var moveSpeed = 10;
+var collision = {
+	top : false,
+	bottom : false,
+	right : false,
+	left : false,
+	
+	//Adjustors are meant to remove the overlap between a player collision
+	//i.e if a player moves, he may be 5px over the block.
+	topAdjustor : 0,
+	bottomAdjustor : 0,
+	leftAdjustor : 0,
+	rightAdjustor : 0
+	
+}
+
+var player;
+var noTouchObjectList = {};
+var keyPressed = {
+	left : false,
+	right: false,
+	up : false,
+	down : false,
+	o : false,
+	z : false,
+	x : false
+}
+
+var Img = {};
+Img.map = new Image();
+Img.map.src = "img/map2.png";  //"img/map2.png";  testMap is other
+Img.text_box = new Image();
+Img.text_box.src = "img/text_box.jpg";
+	
+
+document.onkeydown = function(event) {
+	if(event.keyCode === 68 || event.keyCode === 39)
+		keyPressed.right = true; //d and right arrow
+	if(event.keyCode === 83 || event.keyCode === 40)
+		keyPressed.down = true; //s and down arrow
+	if(event.keyCode === 65 || event.keyCode === 37)
+		keyPressed.left = true; //a and left arrow
+	if(event.keyCode === 87 || event.keyCode === 38)
+		keyPressed.up = true; //w and up arrow
+	if(event.keyCode === 80) //p
+		paused = !paused;
+	if(event.keyCode === 79)
+		keyPressed.o = true; //o
+	if(event.keyCode === 90)
+		keyPressed.z = true; //z
+	if(event.keyCode === 88)
+		keyPressed.x = true; //x
+}
+document.onkeyup = function(event) {
+	if(event.keyCode === 68 || event.keyCode === 39)
+		keyPressed.right = false; //d and right arrow
+	if(event.keyCode === 83 || event.keyCode === 40)
+		keyPressed.down = false; //s and down arrow
+	if(event.keyCode === 65 || event.keyCode === 37)
+		keyPressed.left = false; //a and left arrow
+	if(event.keyCode === 87 || event.keyCode === 38)
+		keyPressed.up = false; //w and up arrow
+	if(event.keyCode === 79)
+		keyPressed.o = false; // o
+	if(event.keyCode === 90)
+		keyPressed.z = false; // z
+	if(event.keyCode === 88)
+		keyPressed.x = false; // x
+}
+
+
+
+var canvasUpdate = function() {
+	if(paused){
+			ctx.fillText('Paused',WIDTH/2 - 40,HEIGHT/2 - 100);
+			return;
+	}
+	console.log("coords: ", player.coordsTopLeft,map.y, ":  map y");
+	//console.log("map: ", map.x,map.y);
+	ctx.clearRect(0,0,WIDTH,CANVAS_HEIGHT);
+	for(event in Event.list_of_events)
+		Event.list_of_events[event].update();
+	map.update();
+	for(rect in NoTouchObject)
+		NoTouchObject[rect].update();
+	player.updatePosition();
+	player.draw();
+	text_box.update();
+	
+}
+
+var onStart = function(){
+	for(var i = 0; i< 120; i += 30){
+		NoTouchObject[i] = new NoTouchObject(i,i,i, 30, 30);
+	}
+	text_box = new TextBox(Img.text_box,0,CANVAS_HEIGHT - TEXT_BOX_HEIGHT,WIDTH,TEXT_BOX_HEIGHT);
+	player = new Player();
+	map = new Map('map',Img.map,array2D);
+	Event.create_events();
+	}
+
+var collisionArray2 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 2467, 2468, 2467, 2468, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 560, 0, 0, 560, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2435, 2436, 2436, 2436, 2467, 2436, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2435, 2435, 2436, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 560, 0, 0, 560, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2436, 2436, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 560, 0, 0, 560, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 181, 182, 183, 184, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 201, 202, 203, 204, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 560, 0, 0, 560, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 162, 163, 164, 162, 163, 164, 161, 162, 163, 164, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 182, 183, 184, 162, 163, 164, 161, 162, 163, 164, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 201, 201, 201, 201, 201, 201, 201, 201, 202, 203, 204, 164, 164, 164, 161, 162, 163, 164, 161, 162, 163, 164, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 2467, 2468, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 181, 182, 183, 184, 221, 221, 221, 221, 221, 221, 221, 221, 222, 223, 224, 184, 184, 184, 181, 182, 183, 184, 181, 182, 183, 184, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 161, 162, 163, 164, 203, 204, 223, 224, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 204, 201, 202, 203, 204, 201, 202, 203, 204, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 181, 182, 183, 184, 223, 224, 223, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 224, 221, 222, 223, 224, 221, 222, 223, 224, 221, 222, 223, 224, 0, 0, 0, 0, 0, 0, 0, 0, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 201, 202, 203, 204, 161, 162, 163, 164, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 162, 163, 164, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 161, 162, 163, 164, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 221, 222, 223, 224, 181, 182, 183, 184, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 182, 183, 184, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 181, 182, 183, 184, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 202, 203, 204, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 202, 203, 204, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 202, 203, 204, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 222, 223, 224, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 222, 223, 224, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 221, 222, 223, 224];
+var collisionArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 457, 458, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 457, 458, 0, 0, 0, 0, 0, 0, 457, 458, 457, 458, 0, 0, 457, 458, 457, 457, 457, 458, 0, 0, 0, 0, 477, 478, 457, 458, 0, 0, 477, 478, 457, 477, 477, 478, 0, 0, 0, 0, 457, 458, 457, 458, 0, 0, 0, 0, 457, 458, 0, 0, 0, 0, 0, 0, 477, 478, 457, 458, 0, 0, 0, 0, 457, 458, 0, 0, 0, 0, 0, 0, 477, 478, 457, 458, 0, 0, 457, 458, 457, 458, 0, 0, 0, 0, 0, 0, 477, 478, 457, 458, 0, 0, 457, 458, 457, 458, 0, 0, 0];
+
+
+var array2D = [];
+for(var i = 0 ; i < NUMBER_OF_TILES_Y; i++){
+	array2D[i] = [];
+	for(var j = 0 ; j < NUMBER_OF_TILES_X; j++){
+		array2D[i][j] = collisionArray2[i * NUMBER_OF_TILES_X + j];
+		if(array2D[i][j]>0)
+			array2D[i][j] = 1;
+	}
+	console.log(i, array2D[i]);
+}
+
+
+var Map = function(id,img,grid){
+	var startingX = (TILE_SIZE * (startingXCoord) * -1)  +  WIDTH/2 -  player.width/2; // Larger # makes you start at a lower coord
+	var startingY = (TILE_SIZE *startingYCoord * -1) + HEIGHT/2 - player.height/2;
+	var self = new TouchableObject(id,startingX,startingY,img.width,img.height)
+	self.startingX = startingX;
+	self.startingY = startingY;
+	self.image = img;
+	self.grid = grid;
+	self.tileWidth = grid[0].length * TILE_SIZE;
+	self.tileHeight = grid.length * TILE_SIZE;
+	self.proposedX = 0;
+	self.proposedY = 0;
+	
+	self.update = function() {
+		self.updatePosition();
+		self.draw();
+	}
+	
+	self.resetCollisions = function() {
+		collision.bottom = false;
+		collision.top = false;
+		collision.left = false;
+		collision.right = false;
+		collision.bottomAdjustor = 0;
+		collision.topAdjustor = 0;
+		collision.leftAdjustor = 0;
+		collision.rightAdjustor = 0;
+	}
+	
+	//block is a rectangle grid space (likely 32 x 32)
+	
+
+	self.isTouchingPlayer = function() {
+		self.updateAllHits(player.getCoordsBottomRight());
+		self.updateAllHits(player.getCoordsBottomLeft());
+		self.updateAllHits(player.getCoordsTopLeft());
+		self.updateAllHits(player.getCoordsTopRight());
+	}
+	
+	//This function takes a coordinate and updates all
+	//Collisions with the player
+	self.updateAllHits = function (coord){
+		xCoord = coord[0];
+		yCoord = coord[1];
+		if(yCoord < 0 || yCoord > map.grid.length)
+			console.log("Player is out of bound Vertically.");
+		//This tests to see if the player is entering a collision space
+		else if(map.grid[yCoord][xCoord] > 0){
+			var block = {
+				x : xCoord * TILE_SIZE,
+				y : yCoord * TILE_SIZE,
+				width : TILE_SIZE,
+				height : TILE_SIZE
+			}
+			//TODO  Add condition where bottom and right (or any corner combo)
+			//      Doesn't cause a spaz.
+			if(gravity.jumping){
+				self.handleTopCollision(block);
+				if(!collision.top){
+					self.handleLeftCollision(block);
+					self.handleRightCollision(block);
+				}
+			}
+			else {
+				self.handleLeftCollision(block);
+				self.handleRightCollision(block);
+				self.handleBottomCollision(block);
+				self.handleTopCollision(block);
+			}
+		}
+	}
+	
+	self.isHitOnTop = function (block){ 
+		if (player.x + player.width > block.x + 2
+		&& player.x < block.x + block.width - 2
+		&& self.proposedY <= block.y + block.height
+		&& self.proposedY + player.height >= block.y + block.height)
+			return true;
+		else 
+			return false;
+	}
+	
+	self.isHitOnBottom = function (block){
+		if (player.x + player.width > block.x + 2
+		&& player.x < block.x + block.width - 2
+		&& self.proposedY < block.y
+		&& self.proposedY + player.height > block.y)
+			return true;
+		else 
+			return false;
+	}
+	
+	self.isHitOnRight = function (block){
+		if(self.proposedX + player.width >= block.x
+		&& self.proposedX + player.width <= block.x + block.width
+		&& player.y < block.y + block.height  - 2  //The +/- 2 gives the block the ability to slide on top of a surface
+		&& player.y + player.height > block.y + 2  //1 doesn't work for some reason.
+		)
+			return true;
+		else
+			return false;
+	}
+	
+	self.isHitOnLeft = function (block){
+		if(self.proposedX  <= block.x + block.width
+		&& self.proposedX + player.width >= block.x + block.width
+		&& player.y < block.y + block.height - 2
+		&& player.y + player.height > block.y + 2
+		)
+			return true;
+		else
+			return false;
+	}
+	
+	self.handleLeftCollision = function(block) {
+		if (self.isHitOnLeft(block)){
+			if(!collision.left)
+				collision.leftAdjustor = block.x + block.width - player.x;
+			collision.left = true;
+		}
+	}
+	
+	self.handleRightCollision = function(block) {
+		if (self.isHitOnRight(block)){
+			if(!collision.right){
+				collision.rightAdjustor = block.x - (player.x + player.width);
+			}
+			collision.right = true;
+		}
+	}
+	
+	self.handleTopCollision = function(block) {
+		if(self.isHitOnTop(block)){
+			if(!collision.top){
+				collision.topAdjustor = block.y + block.height - player.y;
+				}
+			collision.top = true;
+		}
+	}
+	self.handleBottomCollision = function(block) {
+		if(self.isHitOnBottom(block)){	
+			gravity.isJumping = false;
+			if(!collision.bottom){
+				collision.bottomAdjustor = block.y - (player.y + player.height);
+			}
+			collision.bottom = true;
+		}
+			
+	}
+	
+	
+	self.updatePosition = function() {
+		self.resetCollisions();		
+		
+		if(keyPressed.right)
+			self.x -= moveSpeed;
+		if(keyPressed.left)
+			self.x += moveSpeed;	
+		if(keyPressed.up){
+			if(!gravity.isJumping){
+				gravity.jumpStrength = gravity.baseJumpStrength;
+				gravity.isJumping = true;
+			}
+		}
+		if(gravity.jumpStrength > -5 )
+			gravity.jumpStrength -= gravity.currentStrength;
+		self.y += gravity.jumpStrength
+		gravity.isJumping = true;
+		/*
+		//Collision Bottom isn't true!
+		//This shouldn't be needed.  If youre not jumping, you souldn't be falling.
+		if(!gravity.isJumping && !collision.bottom){
+			if(gravity.baseFallSpeed > -5 )
+				gravity.baseFallSpeed -= gravity.currentStrength;
+			self.y += gravity.baseFallSpeed;	
+		}
+		*/
+		self.proposedX = WIDTH/2 - player.width/2 - map.x;
+		self.proposedY = HEIGHT/2 - player.height/2 - map.y;
+		
+		self.isTouchingPlayer();
+		
+		if(collision.left && keyPressed.left){
+			self.x -= moveSpeed;
+			self.x -= collision.leftAdjustor;
+			}
+		if(collision.right && keyPressed.right){
+			self.x += moveSpeed;
+			self.x -= collision.rightAdjustor;
+			}
+			
+		if(collision.top){
+			self.y -= gravity.jumpStrength;
+			self.y -= collision.topAdjustor;  
+			gravity.jumpStrength = 0;
+			}
+		if(collision.bottom){
+			self.y -= gravity.jumpStrength
+			self.y -= collision.bottomAdjustor - 1; //Not sure why the 1 is necessary.
+		}
+	}
+	
+	self.draw = function(){
+		ctx.drawImage(self.image,self.x,self.y);
+	}
+	return self;
+}
+
+onStart();
+
+setInterval(canvasUpdate,40);
+
+
+/*  HOW COLLISIONS SHOULD WORK
+  1.  Update the map's x and y.  
+  3.  Using these new (proposed) coords, check for collisions
+	a.  I only use the proposed X coords for right and left collision
+	b.  I only use the proposed Y coords for top and bottom collision
+	c.  This is so when youre against a right wall hitting right, you don't get a top collision
+	d.  Know error is if there's no collision at player(x,y), no collision at proposed X player Y, but there is a collision at Proposed(XY)
+  4.  If there's no collision, use these new coords (regenerate for now)
+  5.  If there is a collision, revert back the map's x,y.
+  6.  Get the distance between the player and collision (adjustors) ad move the map by that much.
+*/
+
+/* HOW TO HANDLE JUMPS
+	1.  If you press up and are able to jump, then turn jumping flag on
+		a.  Able to jump is defined as bottom collision is true (on a platform)
+	2.  If the jumping flag is on, add to all objects y coord
+		a.  adjustment = to jump strength minus gravity
+		b.  Every cycle jump strength decreases by gravity
+		c.  This step needs to happen before the proposed coords check in collisions
+	3.  When you land, jump strength returns to set value and jumping is set to off
+*/
+  
+</script>
+
+
+
