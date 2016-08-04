@@ -9,7 +9,7 @@ Event = function(id,run_function, run_condition, data) {
 	}
 
 	self.update = function() {
-		if(self.run_condition()){
+		if(self.run_condition(self)){
 			self.startEvent = true;
 			self.run_function(self.data);
 			console.log("Event run: ",self.id );
@@ -34,7 +34,7 @@ Event.create_events = function() {
 			}
 	
 		},
-		run_condition : function(){
+		run_condition : function(self){
 			if(keyPressed.o)
 				return true;
 		},
@@ -50,8 +50,8 @@ Event.create_events = function() {
 		run_function : function(data) {
 			gravity.baseJumpStrength = gravity.baseJumpStrength * 1.1;
 		},
-		run_condition : function(){
-			if(keyPressed.z && !Event.list_of_events['double_jump'].eventCompleted)
+		run_condition : function(self){
+			if(keyPressed.z && !self.eventCompleted)
 				return true;
 		},
 		data : {
@@ -65,7 +65,7 @@ Event.create_events = function() {
 			map.x = map.startingX;
 			map.y = map.startingY;
 		},
-		run_condition : function(){
+		run_condition : function(self){
 			if(keyPressed.x)
 				return true;
 		},
@@ -74,9 +74,27 @@ Event.create_events = function() {
 		}
 	}
 	
+	var jump_boost_message = {
+		id : 'jump_boost_message',
+		run_function : function(data) {
+			text_box.addToMessageQueue(data.message);
+		},
+		run_condition : function(self){
+			if(player.coordsTopRight[0] == 19 
+			&& player.coordsTopRight[1] == 27
+			&& self.eventCompleted != true)
+				return true;
+			else
+				return false;
+		},
+		data : {
+			message : "If you press Z, you'll jump higher!"
+		}
+	}
+	
 	var double_jump = new Event(double_jump.id, double_jump.run_function, double_jump.run_condition, double_jump.data);	
 	var hello_world = new Event(hello_world.id, hello_world.run_function, hello_world.run_condition, hello_world.data);
 	var restart_map = new Event(restart_map.id, restart_map.run_function, restart_map.run_condition, restart_map.data);
-	
+	var jump_boost_message = new Event(jump_boost_message.id, jump_boost_message.run_function, jump_boost_message.run_condition, jump_boost_message.data);
 	console.log('Events created');
 }
