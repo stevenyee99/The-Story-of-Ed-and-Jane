@@ -3,6 +3,7 @@
 <script src="js/utilities.js"></script>
 <script src="js/collisionMap.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/platforms.js"></script>
 <script src="js/text_box.js"></script>
 <script src="js/events.js"></script>
 <script src="js/collisions.js"></script>
@@ -20,8 +21,9 @@ var map_height = NUMBER_OF_TILES_Y* TILE_SIZE;
 var startingXCoord = 16;//16 was prior // Starts at 0,0
 var startingYCoord = 0; // Y starts at the top not bottom.  Starts at 0,0
 var mapStartX = 0;
+var cycleCounter = 0;    
 
-var DEBUG = 'collision-platform';
+var DEBUG = 'none';//collision-platform';
     
 var logThis = function(type,data){
     if(DEBUG === type  || DEBUG ==='all')
@@ -115,10 +117,13 @@ var canvasUpdate = function() {
 			ctx.fillText('Paused',WIDTH/2 - 40,HEIGHT/2 - 100);
 			return;
 	}
+    console.log("");
+    console.log(cycleCounter);
+    console.log("bottom right y: ",player.y + player.height);
 	ctx.clearRect(0,0,WIDTH,CANVAS_HEIGHT);
 	getPlayerMovement();
-	for(event in Event.list_of_events)
-		Event.list_of_events[event].update();
+	for(event in Event.listOfEvents)
+		Event.listOfEvents[event].update();
 	map.update();
 	for(rect in NoTouchObject)
 		NoTouchObject[rect].update();
@@ -128,20 +133,15 @@ var canvasUpdate = function() {
 	player.updatePosition();
 	player.draw();
 	text_box.update();
-    logThis('collision-platform', player.x);
-	
+    cycleCounter++;
 }
 
 var onStart = function(){
 	text_box = new TextBox(Img.text_box,0,CANVAS_HEIGHT - TEXT_BOX_HEIGHT,WIDTH,TEXT_BOX_HEIGHT);
 	player = new Player();
 	map = new Map('map',Img.map,array2D);
-	platform = new Platform('1',[18,10],50,40,.5,-.3);
-	//platform2 = new Platform('2',100,450,100,40,1,0);
-	
-	Event.create_events();
-    console.log(PlatformList);
-    console.log(getCorrectPlatform(18,10));
+    Platform.createLevelPlatforms();
+	Event.createLevelEvents();
 	}
 
 var array2D = [];

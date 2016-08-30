@@ -17,11 +17,11 @@ Event = function(id,run_function, run_condition, data) {
 		}
 	}
 
-	Event.list_of_events[self.id] = self;
+	Event.listOfEvents[self.id] = self;
 	return self;
 }
-Event.list_of_events = {};
-Event.create_events = function() {
+Event.listOfEvents = {};
+Event.createLevelEvents = function() {
 	
 	var hello_world = {
 		id : 'hello_world',

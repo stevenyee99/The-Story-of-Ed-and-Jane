@@ -25,8 +25,11 @@ var proposedX = 0;
 var proposedY = 0;
 var finalXMove = 0;
 var finalYMove = 0;
+var collisionSpaceValue = 0;
+var onThisPlatform; //THis is the platform that the player is currently on.
+var maxJumpStrengthBeforeError = 19;  //player height is the limit for still objects
 
-//THis function sets the final X and Y movements (px) of the player.
+//This function sets the final X and Y movements (px) of the player.
 var getPlayerMovement = function(){
 	resetCollisions();		
 	calculateProposedCoords();
@@ -49,12 +52,14 @@ var resetCollisions = function() {
 		proposedY = 0;
 		finalYMove = 0;
 		finalXMove = 0;
+        collisionSpaceValue = 0;
+        onThisPlatform = null;
 	}
 
 var calculateProposedCoords = function(){
 	if(keyPressed.right){
-			deltaX -= moveSpeed;
-			finalXMove -= moveSpeed;
+        deltaX -= moveSpeed;
+        finalXMove -= moveSpeed;
 	}
 	if(keyPressed.left){
 		deltaX += moveSpeed;	
@@ -66,37 +71,69 @@ var calculateProposedCoords = function(){
 			gravity.isJumping = true;
 		}
 	}
-	if(gravity.jumpStrength > -19 ) //player height is the limit.
+	if(gravity.jumpStrength > -maxJumpStrengthBeforeError ) //player height is the limit for still objects
 		gravity.jumpStrength -= gravity.currentStrength;
 	deltaY -= gravity.jumpStrength;
 	finalYMove += gravity.jumpStrength;
 	gravity.isJumping = true;			
 }	
 
+//Get Proposed coords for each corner
+
+var getProposedCoordsTopRight = function () {
+	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
+	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
+    return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
+	}
+var getProposedCoordsBottomRight = function () {
+	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
+	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
+}
+
+var getProposedCoordsBottomLeft = function () {
+	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
+	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
+}
+var getProposedCoordsTopLeft = function () {
+	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
+	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
+}
+
+
+
 //Check to see if theres a collision
 var isHitOnTop = function (block){ 
 	if (player.x + player.width > block.x + 2
 	&& player.x < block.x + block.width - 2
-	&& proposedY <= block.y + block.height
-	&& proposedY + player.height >= block.y + block.height)
+	&& proposedY <= block.y + block.height - block.speedY
+	&& proposedY + player.height >= block.y + block.height - block.speedY)
 		return true;
 	else 
 		return false;
 };
 
-var isHitOnBottom = function (block){
-	if(player.x + player.width > block.x + 2
-	&& player.x < block.x + block.width - 2
-	&& proposedY - player.height < block.y
-	&& proposedY >= block.y)
-		return true;
-	else 
-		return false;
+var isHitOnBottom = function(block){
+    //logThis('collision-platform', ('proposed y: ' + proposedY.toString() + '  block: ' + block.y.toString() + '  block speed: ' + block.speedY.toString()));
+    try{
+        if(player.x + player.width > block.x + 2
+        && player.x < block.x + block.width - 2
+        && proposedY - player.height < block.y - block.speedY
+        && proposedY >= block.y //Took of the speed here and it works.  not sure why tho.
+          )
+            return true;
+        else 
+            return false;
+    } catch(err){
+        throw err; //block is undefined
+    }
 };
 
 var isHitOnRight = function (block){
-	if(proposedX + player.width >= block.x
-	&& proposedX + player.width <= block.x + block.width
+	if(proposedX + player.width >= block.x - block.speedX
+	&& proposedX + player.width <= block.x + block.width - block.speedX
 	&& player.y < block.y + block.height  - 2  //The +/- 2 gives the block the ability to slide on top of a surface
 	&& player.y + player.height > block.y + 2  //1 doesn't work for some reason.
 	)
@@ -106,8 +143,8 @@ var isHitOnRight = function (block){
 };
 
 var isHitOnLeft = function (block){
-	if(proposedX  <= block.x + block.width
-	&& proposedX + player.width >= block.x + block.width
+	if(proposedX  <= block.x + block.width - block.speedX
+	&& proposedX + player.width >= block.x + block.width - block.speedX
 	&& player.y < block.y + block.height - 2
 	&& player.y + player.height > block.y + 2
 	)
@@ -147,6 +184,7 @@ var handleBottomCollision = function(block) {
 		gravity.isJumping = false;
 		if(!collision.bottom){
 			collision.bottomAdjustor = block.y - proposedY;
+            gravity.jumpStrength = 0;
 		}
 		collision.bottom = true;
 	}	
@@ -168,12 +206,15 @@ var getBlock = function(xCoord,yCoord,gridValue){
 			x : xCoord * TILE_SIZE,
 			y : yCoord * TILE_SIZE,
 			width : TILE_SIZE,
-			height : TILE_SIZE
+			height : TILE_SIZE,
+            speedY : 0,
+            speedX : 0
 		}
         return block;
     }
     else if (gridValue === 2){
         logThis('collision-platform',"about to start colliding with a platform");
+        //proposedY -= maxJumpStrengthBeforeError -1;
         var allBlocks = getCorrectPlatform(xCoord,yCoord);
         //Error handling
         if(allBlocks.length === 0 || allBlocks.length === undefined)
@@ -183,14 +224,17 @@ var getBlock = function(xCoord,yCoord,gridValue){
             alert("There is more than 1 platform in this space.");
         else {
             var thisBlock = allBlocks[0];
+            onThisPlatform = thisBlock;
             var block = {
                 x : thisBlock.xRelativeToMap,
                 y : thisBlock.yRelativeToMap,
                 width : thisBlock.width,
-                height : thisBlock.height  
+                height : thisBlock.height ,
+                speedY : thisBlock.speedY,
+                speedX :  thisBlock.speedX
             }
-            logThis('collision-platform', block);
-            logThis('collision-platform', player.x);
+            logThis('collision-platform', ('proposed Y: ' + proposedY.toString()));
+            logThis('collision-platform', ('block: ',block));
             return block;
         }
     }
@@ -205,13 +249,12 @@ var updateAllHits = function (coord){
 		console.log("Player is out of bound Vertically.");
 	//This tests to see if the player is entering a collision space
 	else if(map.grid[yCoord][xCoord] > 0){
-		var block = getBlock(xCoord,yCoord,map.grid[yCoord][xCoord]);
+        collisionSpaceValue = map.grid[yCoord][xCoord];
+		var block = getBlock(xCoord,yCoord,collisionSpaceValue);
 		
         //TODO  Add condition where bottom and right (or any corner combo)
 		//      Doesn't cause a spaz.
 		
-        //TODO:  Im getting the platform, but its not registering any hits.
-        
 		if(isHitOnBottom(block)){
 			handleBottomCollision(block);
 			handleLeftCollision(block);
@@ -233,29 +276,7 @@ var updateAllHits = function (coord){
 	}
 }
 
-//Get Proposed coords for each corner
 
-var getProposedCoordsTopRight = function () {
-	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
-	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
-		return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
-	}
-var getProposedCoordsBottomRight = function () {
-	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
-	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
-	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
-}
-
-var getProposedCoordsBottomLeft = function () {
-	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
-	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
-	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
-}
-var getProposedCoordsTopLeft = function () {
-	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
-	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
-	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
-}
 // check to see if there are any collisions
 var isTouchingPlayer = function() {
 
@@ -266,6 +287,7 @@ var isTouchingPlayer = function() {
 	}
 	
 var calculateFinalMoveCoords = function(){
+    logThis('collision-platform', ('bottom collision: ' + collision.bottom.toString()));
 	if(collision.left && keyPressed.left){
 		finalXMove -= collision.leftAdjustor;
 		}
@@ -274,13 +296,23 @@ var calculateFinalMoveCoords = function(){
 		}
 		
 	if(collision.top){
-		//finalYMove -= gravity.jumpStrength;
 		finalYMove -= collision.topAdjustor;  
 		gravity.jumpStrength = 0;
 		}
 	if(collision.bottom){
-		finalYMove -= collision.bottomAdjustor; //Not sure why the 1 is necessary.
-	}
+		finalYMove -= collision.bottomAdjustor;
+        logThis('collision-platform', 'bottom adjustor: ' + collision.bottomAdjustor.toString());
+	    if(onThisPlatform !== undefined && onThisPlatform !== null){
+            try {
+                finalXMove -= onThisPlatform.speedX;  //must be minus.  Plus will go in reverse!
+                finalYMove -= onThisPlatform.speedY;
+            }
+            catch(err){
+                throw "There is a platform, but it has no speed!"
+                }
+            }
+    }
+    
 	
 }
 
