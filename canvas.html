@@ -1,5 +1,6 @@
 <canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
 
+<script src="js/load_images.js"></script>
 <script src="js/utilities.js"></script>
 <script src="js/collisionMap.js"></script>
 <script src="js/entities.js"></script>
@@ -24,11 +25,36 @@ var mapStartX = 0;
 var cycleCounter = 0;    
 
 var DEBUG = 'none';//collision-platform';
+
     
 var logThis = function(type,data){
     if(DEBUG === type  || DEBUG ==='all')
         console.log(data);
 }    
+
+
+
+var Img = {};
+
+Img.map = new Image();
+Img.map.src = "map.png";  //"img/map2.png";  testMap is other
+Img.map.onload = function() {Img.map.totesLoaded = true}
+Img.text_box = new Image();
+Img.text_box.src = "img/text_box.jpg";
+Img.text_box.onload = function() {Img.text_box.totesLoaded = true}
+Img.platformCloud1 = new Image();   
+Img.platformCloud1.src = "img/platform-cloud-1.png";
+Img.platformCloud1.onload = function() {
+    Img.platformCloud1.loaded = true
+    console.log("");
+    console.log("");
+    console.log("");
+    console.log("");
+    console.log("");
+    console.log("Image loaded");
+    onStart();  //ONSTART MOVED HERE.  I SHOULD BE ABLE TO ADD IMAGES NOW TO PALTOFRM
+}
+
 
 var paused = false;
 var gravity = {
@@ -68,13 +94,8 @@ var keyPressed = {
 	x : false
 }
 
-var Img = {};
-Img.map = new Image();
-Img.map.src = "map2.png";  //"img/map2.png";  testMap is other
-Img.text_box = new Image();
-Img.text_box.src = "img/text_box.jpg";
-console.log("Images loaded");
-
+   
+    
 document.onkeydown = function(event) {
 	if(event.keyCode === 68 || event.keyCode === 39)
 		keyPressed.right = true; //d and right arrow
@@ -155,7 +176,7 @@ for(var i = 0 ; i < NUMBER_OF_TILES_Y; i++){
 	//console.log(i, array2D[i]);
 }
 
-onStart();
+//onStart();
 
 setInterval(canvasUpdate,40);
 

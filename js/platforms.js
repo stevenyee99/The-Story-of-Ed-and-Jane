@@ -20,7 +20,7 @@
     
 
 PlatformList ={};
-Platform = function(id,coords,width,height, speedX, speedY, data){
+Platform = function(id,coords,img, speedX, speedY, data){
 	var self = {
 		id : id,
         cycleCreated : cycleCounter,
@@ -28,9 +28,10 @@ Platform = function(id,coords,width,height, speedX, speedY, data){
 		y : ((coords[1] + 1) * TILE_SIZE) + map.y, //Not sure why the +1 is needed.
         xRelativeToMap : (coords[0] * TILE_SIZE) + map.x,
         yRelativeToMap : ((coords[1] + 1) * TILE_SIZE) + map.y,
-		width : width,
-		height : height,
-		speedX : speedX,
+        img : img,
+		width : img.width,
+		height : img.height,
+        speedX : speedX,
 		speedY : speedY,
 		toDelete : false,
 		allCoords : [],
@@ -43,6 +44,8 @@ Platform = function(id,coords,width,height, speedX, speedY, data){
 		priorTopCoord : 0,
 		priorBottomCoord : 0,
 		priorMapGridValues : {},
+        timeChangedXDirection : cycleCounter,
+        timeChangedYDirection : cycleCounter,
         data : data
 	}
 	self.topLeftCoord = coords;
@@ -99,14 +102,13 @@ Platform = function(id,coords,width,height, speedX, speedY, data){
 	}
 	
 	self.draw = function () {
+        ctx.drawImage(img,self.x,self.y - 7);
+        /*
 		ctx.save();
 		ctx.fillStyle = 'red';
 		ctx.fillRect(self.x, self.y, self.width, self.height);
 		ctx.restore();
-	}
-	
-	self.destroy = function() {
-		
+        */
 	}
 
 	self.setEdgeCoords = function() {
@@ -130,60 +132,46 @@ Platform = function(id,coords,width,height, speedX, speedY, data){
 
 	self.updateMapGrid = function() {
 		self.setEdgeCoords();  //Gets values for all edges
-        //Checks to see if there are any changes in space
-        if(self.priorBottomCoord > self.currentBottomCoord)
-            self.deleteRowFromMapGrid(self.priorBottomCoord); //Moving up.  Delete bottom row
-        if(self.priorBottomCoord < self.currentBottomCoord)
-            self.addRowToMapGrid(self.currentBottomCoord)//Moving down.  Add bottom row
-        if(self.priorTopCoord < self.currentTopCoord)
-            self.deleteRowFromMapGrid(self.priorTopCoord) //Moving down.  Delete top row
-        if(self.priorTopCoord > self.currentTopCoord)   
-            self.addRowToMapGrid(self.currentTopCoord) //Moving up.  Add top row
-        //Left and right.
-        if(self.priorLeftCoord > self.currentLeftCoord)  
-            self.addColumnToMapGrid(self.currentLeftCoord) // Moving left.  Add leftmost column
-        if(self.priorLeftCoord < self.currentLeftCoord)
-            self.deleteColumnFromMapGrid(self.priorLeftCoord)// Moving right.  Delete leftmost column
-        if(self.priorRightCoord > self.currentRightCoord)  
-            self.deleteColumnFromMapGrid(self.priorRightCoord)// Moving left. Delete rightmost column
-        if(self.priorRightCoord < self.currentRightCoord)  
-            self.addColumnToMapGrid(self.currentRightCoord)//Moving right.  Add rightmost column  
-            
+        
+        //  I changed how i keep track of coords a platforms occupies.
+        //  It was originally only tracking a change of state (below)
+        //  Now it brute forces it each cycle.
+        
+        var currentCoords = [];
+        var coordsToDelete =[];
+        for(i = self.currentTopCoord; i < self.currentBottomCoord + 1; i++){
+            for(k = self.currentLeftCoord; k < self.currentRightCoord + 1; k++){
+                var key = (k.toString() + ',' + i.toString());
+                currentCoords.push(key);             
+            }
+        }
+        
+        for(var p = 0; p < self.allCoords.length; p++){
+            if(currentCoords.indexOf(self.allCoords[p]) == -1){ //This means that the platform moved off of the space
+                coordsToDelete.push(self.allCoords[p]);
+            }
+        }
+        for(var d = 0; d < coordsToDelete.length; d++){
+            self.deleteKeyFromMapGrid(coordsToDelete[d]);
+        }
+        for(var l = 0; l < currentCoords.length;l++){
+            if(self.allCoords.indexOf(currentCoords[l]) == -1) {  //THis means that the platform entered a new space
+                self.addKeyToMapGrid(currentCoords[l]);
+            }
+        }   
 	}
-	
-    self.addRowToMapGrid = function(row){
-        for(i = self.currentLeftCoord; i < self.currentRightCoord + 1; i++){
-            var key = (i.toString() + ',' + row.toString());
-            self.priorMapGridValues[key] = map.grid[row][i];
-            map.grid[row][i] = 2;
-            self.allCoords.push(key);
-        }
-    }
     
-    self.addColumnToMapGrid = function(column){
-        for(i = self.currentTopCoord; i < self.currentBottomCoord + 1; i++){
-            var key = (column.toString() + ',' + i.toString());
-            self.priorMapGridValues[key] = map.grid[i][column];
-            map.grid[i][column] = 2;
+    //This takes incoords as a key "18,18"
+    self.addKeyToMapGrid = function(key){
+        var arrayCoords = key.split(",");
+        try {
+            self.priorMapGridValues[key] = map.grid[arrayCoords[1]][arrayCoords[0]];
+            map.grid[arrayCoords[1]][arrayCoords[0]] = 2;
             self.allCoords.push(key);
-        }
-    }
-    self.deleteRowFromMapGrid = function(row){
-        for(i = self.currentLeftCoord; i < self.currentRightCoord + 1; i++){
-            var key = (i.toString() + ',' + row.toString());
-            map.grid[row][i] =  self.priorMapGridValues[key];
-            delete self.priorMapGridValues[key];
-            self.allCoords.splice(self.allCoords.indexOf(key), 1);
-            
-        }
-    }
-    self.deleteColumnFromMapGrid = function(column){
-        for(i = self.currentTopCoord; i < self.currentBottomCoord + 1; i++){
-            var key = (column.toString() + ',' + i.toString());
-            map.grid[i][column] = self.priorMapGridValues[key];
-            delete self.priorMapGridValues[key];
-            self.allCoords.splice(self.allCoords.indexOf(key), 1);
-        }
+        } catch(err){
+            console.log("array coords:", arrayCoords);
+            throw err
+        }   
     }
     
     //This takes incoords as a key "18,18"
@@ -205,33 +193,58 @@ Platform = function(id,coords,width,height, speedX, speedY, data){
 	self.currentTopCoord =  self.topLeftCoord[1];
 	self.currentBottomCoord = self.bottomLeftCoord[1];
 	
-	for(var k =self.currentTopCoord; k<self.currentBottomCoord + 1; k++){
-		self.addRowToMapGrid(k);
-		}
+//	for(var k =self.currentTopCoord; k<self.currentBottomCoord + 1; k++){
+//		self.addRowToMapGrid(k);
+//		}
+    var currentCoords = [];
+    for(i = self.currentTopCoord; i < self.currentBottomCoord + 1; i++){
+        for(k = self.currentLeftCoord; k < self.currentRightCoord + 1; k++){
+            var key = (k.toString() + ',' + i.toString());
+            currentCoords.push(key);             
+        }
+    }
+    for(var l = 0; l < currentCoords.length;l++){
+        console.log(key);
+        if(self.allCoords.indexOf(currentCoords[l]) == -1) {  //THis means that the platform entered a new space
+            self.addKeyToMapGrid(key);
+        }
+    }
+        
+    
 	PlatformList[self.id] = self;
 	return self;
 }
 
 Platform.createLevelPlatforms = function(){
+    var changeXDirection = (self) => {
+        self.speedX = (-1*self.speedX);
+        finalXMove -= self.speedX*2;
+        self.timeChangedXDirection = cycleCounter;
+        logThis('collision-platform', 'changing block X direction');
+    }    
+    
+    var changeYDirection = (self) => {
+        self.speedY = (-1*self.speedY);
+        finalYMove -= self.speedY *2;
+        self.timeChangedYDirection = cycleCounter;
+        logThis('collision-platform', 'changing block Y direction');        
+    }
+    
     var data = {
         course_change_function : function(self) {
-            if(self.topRightCoord[1] === 1 || self.topRightCoord[1] === 11){
-                self.speedY = (-1*self.speedY);
-                logThis('collision-platform', 'changing block course');
-            }
-            if(self.topRightCoord[0] === 17 || self.topRightCoord[0] === 27){
-                self.speedX = (-1*self.speedX);
-                logThis('collision-platform', 'changing block course');
-            }
+            if((self.topRightCoord[1] === 1 || self.topRightCoord[1] === 11) && self.timeChangedYDirection < (cycleCounter - 5))
+                changeYDirection(self);
+            if((self.topRightCoord[0] === 17 || self.topRightCoord[0] === 27) && self.timeChangedXDirection < (cycleCounter - 5))
+                changeXDirection(self);     
             },
         delete_conditon_function : function(self){
-            if(cycleCounter - self.cycleCreated > 300)
+            if(cycleCounter - self.cycleCreated > 600)
                 return true;
             else
                 return false;
         }
         
     }
-    platform = new Platform('1',[18,10],50,40,2,-2,data);
+    platform = new Platform('1',[18,10],Img.platformCloud1,2,-2,data);
     
 }

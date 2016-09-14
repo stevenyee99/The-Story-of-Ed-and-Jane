@@ -127,6 +127,7 @@ var isHitOnBottom = function(block){
         else 
             return false;
     } catch(err){
+        console.log('heres the error block: ', block);
         throw err; //block is undefined
     }
 };
@@ -234,7 +235,10 @@ var getBlock = function(xCoord,yCoord,gridValue){
                 speedX :  thisBlock.speedX
             }
             logThis('collision-platform', ('proposed Y: ' + proposedY.toString()));
-            logThis('collision-platform', ('block: ',block));
+            logThis('collision-platform', ('block: ',onThisPlatform));
+            if(block === undefined){
+                console.log('Error!  Block is not defined.');
+            }
             return block;
         }
     }
@@ -251,6 +255,15 @@ var updateAllHits = function (coord){
 	else if(map.grid[yCoord][xCoord] > 0){
         collisionSpaceValue = map.grid[yCoord][xCoord];
 		var block = getBlock(xCoord,yCoord,collisionSpaceValue);
+        if(block === undefined){
+                console.log('Error2!  Block is not defined.');
+                console.log("here are the coords: ", xCoord,yCoord);
+                console.log("here is the map value: ", map.grid[yCoord][xCoord]);
+                console.log(PlatformList);
+                var allBlocks = getCorrectPlatform(xCoord,yCoord);
+                console.log(allBlocks);
+                console.log(onThisPlatform);
+            }
 		
         //TODO  Add condition where bottom and right (or any corner combo)
 		//      Doesn't cause a spaz.
