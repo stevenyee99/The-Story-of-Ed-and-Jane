@@ -78,6 +78,10 @@ var calculateProposedCoords = function(){
 	gravity.isJumping = true;			
 }	
 
+
+//Get 
+
+
 //Get Proposed coords for each corner
 
 var getProposedCoordsTopRight = function () {
@@ -108,8 +112,8 @@ var getProposedCoordsTopLeft = function () {
 var isHitOnTop = function (block){ 
 	if (player.x + player.width > block.x + 2
 	&& player.x < block.x + block.width - 2
-	&& proposedY <= block.y + block.height - block.speedY
-	&& proposedY + player.height >= block.y + block.height - block.speedY)
+	&& proposedY + player.height <= block.y + block.height - block.speedY
+	&& proposedY >= block.y + block.height - block.speedY)
 		return true;
 	else 
 		return false;
@@ -307,6 +311,7 @@ var calculateFinalMoveCoords = function(){
 	if(collision.top){
 		finalYMove -= collision.topAdjustor;  
 		gravity.jumpStrength = 0;
+        logThis('collision-platform', 'top adjustor: ' + collision.topAdjustor.toString());
 		}
 	if(collision.bottom){
 		finalYMove -= collision.bottomAdjustor;
