@@ -5,13 +5,14 @@
 <script src="js/collisionMap.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/platforms.js"></script>
+<script src="js/platform_plus.js"></script>
 <script src="js/text_box.js"></script>
 <script src="js/events.js"></script>
 <script src="js/collisions.js"></script>
 <script>
 var ctx  =  document.getElementById("ctx").getContext("2d");
 ctx.font = '30px Arial'
-var TILE_SIZE = 32;  //pixel size of a tile on browser.  IT CHANGES BASED ON THE MAP!
+var TILE_SIZE = 32;  //pixel size of a tile on browser.
 var NUMBER_OF_TILES_X =  128; //64; //50;  16 is other
 var NUMBER_OF_TILES_Y =   64;//32 //32;  16 is other
 var CANVAS_HEIGHT = 500;
@@ -24,7 +25,7 @@ var startingYCoord = 0; // Y starts at the top not bottom.  Starts at 0,0
 var mapStartX = 0;
 var cycleCounter = 0;    
 
-var DEBUG = 'none';//collision-platform';
+var DEBUG = 'collision-platform';
 
     
 var logThis = function(type,data){
@@ -46,11 +47,6 @@ Img.platformCloud1 = new Image();
 Img.platformCloud1.src = "img/platform-cloud-1.png";
 Img.platformCloud1.onload = function() {
     Img.platformCloud1.loaded = true
-    console.log("");
-    console.log("");
-    console.log("");
-    console.log("");
-    console.log("");
     console.log("Image loaded");
     onStart();  //ONSTART MOVED HERE.  I SHOULD BE ABLE TO ADD IMAGES NOW TO PALTOFRM
 }
@@ -140,7 +136,7 @@ var canvasUpdate = function() {
 	}
     console.log("");
     console.log(cycleCounter);
-    console.log("bottom right y: ",player.y + player.height);
+    console.log("top left x/y: ",player.x, ':',player.y );
 	ctx.clearRect(0,0,WIDTH,CANVAS_HEIGHT);
 	getPlayerMovement();
 	for(event in Event.listOfEvents)
@@ -150,6 +146,9 @@ var canvasUpdate = function() {
 		NoTouchObject[rect].update();
 	for(platform in PlatformList){
 		PlatformList[platform].update();
+		}
+    for(platformPlus in PlatformPlusList){
+		PlatformPlusList[platformPlus].update();
 		}
 	player.updatePosition();
 	player.draw();
@@ -162,6 +161,7 @@ var onStart = function(){
 	player = new Player();
 	map = new Map('map',Img.map,array2D);
     Platform.createLevelPlatforms();
+    PlatformPlus.createLevelPlatformPlus();
 	Event.createLevelEvents();
 	}
 

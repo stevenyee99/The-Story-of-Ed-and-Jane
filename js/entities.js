@@ -48,7 +48,7 @@ TouchableObject =  function(id,x,y,width,height){
 TouchableObject.collision = false;
 
 Player = function(){
-	var self = NoTouchObject('player',WIDTH/2 ,HEIGHT/2, 20,20);
+	var self = NoTouchObject('player',WIDTH/2 ,HEIGHT/2, 20,20); //Starts slipping platforms at 29.  Width doesn't affect the slip.
 	self.color = 'blue';
 	self.XTile = Math.floor((WIDTH/2)/TILE_SIZE);
 	self.YTile = Math.floor((HEIGHT/2)/TILE_SIZE);
@@ -67,8 +67,6 @@ Player = function(){
 		ctx.fillRect(WIDTH/2 - self.width/2, HEIGHT/2 - self.height/2, self.width, self.height);
 		ctx.restore();
 	}
-	
-
 
 	self.updatePosition = function(){
 		self.x = WIDTH/2 - player.width/2 - map.x;

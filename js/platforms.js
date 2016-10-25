@@ -26,8 +26,8 @@ Platform = function(id,coords,img, speedX, speedY, data){
         cycleCreated : cycleCounter,
 		x : (coords[0] * TILE_SIZE) + map.x,
 		y : ((coords[1] + 1) * TILE_SIZE) + map.y, //Not sure why the +1 is needed.
-        xRelativeToMap : (coords[0] * TILE_SIZE) + map.x,
-        yRelativeToMap : ((coords[1] + 1) * TILE_SIZE) + map.y,
+        xRelativeToMap : (coords[0] * TILE_SIZE),
+        yRelativeToMap : ((coords[1] + 1) * TILE_SIZE),
         img : img,
 		width : img.width,
 		height : img.height,
@@ -61,25 +61,11 @@ Platform = function(id,coords,img, speedX, speedY, data){
 	self.update = function() {
 		if(self.delete_conditon_function(self)){
             console.log('about to delete a platform');
-            console.log("prioir values",self.priorMapGridValues);
-            console.log("current map 2s: ");
-            for(var y= 0; y<map.grid.length; y++){
-                for(var x= 0; x<map.grid[y].length; x++){
-                    if(map.grid[y][x] ===2)
-                        console.log(x,y);
-                }
-            }
             while(self.allCoords.length > 0){
                 self.deleteKeyFromMapGrid(self.allCoords[0]);
             }
 			delete PlatformList[self.id];
-            console.log("console deleted.  Map 2s");
-            for(var y= 0; y<map.grid.length; y++){
-                for(var x= 0; x<map.grid[y].length; x++){
-                    if(map.grid[y][x] ===2)
-                        console.log(x,y);
-                }
-            }
+
             console.log(PlatformList);
         }
 		else{
@@ -185,6 +171,20 @@ Platform = function(id,coords,img, speedX, speedY, data){
             throw err
         }   
     }
+    
+    self.changeXDirection = () => {
+        self.speedX = (-1*self.speedX);
+        finalXMove -= self.speedX*2;
+        self.timeChangedXDirection = cycleCounter;
+        logThis('collision-platform', 'changing block X direction');
+    }    
+    
+    self.changeYDirection = () => {
+        self.speedY = (-1*self.speedY);
+        finalYMove -= self.speedY *2;
+        self.timeChangedYDirection = cycleCounter;
+        logThis('collision-platform', 'changing block Y direction');        
+    }
 	
 //ON Start is here.
 //Get map grid values of starting platform	
@@ -216,26 +216,12 @@ Platform = function(id,coords,img, speedX, speedY, data){
 }
 
 Platform.createLevelPlatforms = function(){
-    var changeXDirection = (self) => {
-        self.speedX = (-1*self.speedX);
-        finalXMove -= self.speedX*2;
-        self.timeChangedXDirection = cycleCounter;
-        logThis('collision-platform', 'changing block X direction');
-    }    
-    
-    var changeYDirection = (self) => {
-        self.speedY = (-1*self.speedY);
-        finalYMove -= self.speedY *2;
-        self.timeChangedYDirection = cycleCounter;
-        logThis('collision-platform', 'changing block Y direction');        
-    }
-    
     var data = {
         course_change_function : function(self) {
             if((self.topRightCoord[1] === 1 || self.topRightCoord[1] === 11) && self.timeChangedYDirection < (cycleCounter - 5))
-                changeYDirection(self);
+               self.changeYDirection();
             if((self.topRightCoord[0] === 17 || self.topRightCoord[0] === 27) && self.timeChangedXDirection < (cycleCounter - 5))
-                changeXDirection(self);     
+                self.changeXDirection();     
             },
         delete_conditon_function : function(self){
             if(cycleCounter - self.cycleCreated > 600)

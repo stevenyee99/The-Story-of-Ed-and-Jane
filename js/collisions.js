@@ -215,7 +215,6 @@ var getBlock = function(xCoord,yCoord,gridValue){
     }
     else if (gridValue === 2){
         logThis('collision-platform',"about to start colliding with a platform");
-        //proposedY -= maxJumpStrengthBeforeError -1;
         var allBlocks = getCorrectPlatform(xCoord,yCoord);
         //Error handling
         if(allBlocks.length === 0 || allBlocks.length === undefined)
@@ -260,9 +259,6 @@ var updateAllHits = function (coord){
                 console.log("here are the coords: ", xCoord,yCoord);
                 console.log("here is the map value: ", map.grid[yCoord][xCoord]);
                 console.log(PlatformList);
-                var allBlocks = getCorrectPlatform(xCoord,yCoord);
-                console.log(allBlocks);
-                console.log(onThisPlatform);
             }
 		
         //TODO  Add condition where bottom and right (or any corner combo)
