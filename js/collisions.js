@@ -179,7 +179,7 @@ var handleRightCollision = function(block) {
 var handleTopCollision = function(block) {
 	if(isHitOnTop(block)){
 		if(!collision.top){
-			collision.topAdjustor = block.y + block.height - proposedY;
+			collision.topAdjustor = block.y + block.height + 10 - proposedY;
 			}
 		collision.top = true;
 	}
@@ -310,7 +310,7 @@ var calculateFinalMoveCoords = function(){
 		
 	if(collision.top){
 		finalYMove -= collision.topAdjustor;  
-		gravity.jumpStrength = 0;
+		gravity.jumpStrength = -5;
         logThis('collision-platform', 'top adjustor: ' + collision.topAdjustor.toString());
 		}
 	if(collision.bottom){

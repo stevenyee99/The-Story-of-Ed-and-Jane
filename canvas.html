@@ -42,7 +42,8 @@ Img.map.src = "map.png";  //"img/map2.png";  testMap is other
 Img.map.onload = function() {Img.map.totesLoaded = true}
 Img.text_box = new Image();
 Img.text_box.src = "img/text_box.jpg";
-Img.text_box.onload = function() {Img.text_box.totesLoaded = true}
+Img.player = new Image();
+Img.player.src = "img/ed.png";
 Img.platformCloud1 = new Image();   
 Img.platformCloud1.src = "img/platform-cloud-1.png";
 Img.platformCloud1.onload = function() {
@@ -137,6 +138,7 @@ var canvasUpdate = function() {
     console.log("");
     console.log(cycleCounter);
     console.log("top left x/y: ",player.x, ':',player.y );
+    console.log("map x/y: ",map.x, ':',map.y );
 	ctx.clearRect(0,0,WIDTH,CANVAS_HEIGHT);
 	getPlayerMovement();
 	for(event in Event.listOfEvents)

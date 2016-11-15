@@ -48,7 +48,7 @@ TouchableObject =  function(id,x,y,width,height){
 TouchableObject.collision = false;
 
 Player = function(){
-	var self = NoTouchObject('player',WIDTH/2 ,HEIGHT/2, 20,20); //Starts slipping platforms at 29.  Width doesn't affect the slip.
+	var self = NoTouchObject('player',WIDTH/2 ,HEIGHT/2, 20,80); //Starts slipping platforms at 29.  Width doesn't affect the slip.
 	self.color = 'blue';
 	self.XTile = Math.floor((WIDTH/2)/TILE_SIZE);
 	self.YTile = Math.floor((HEIGHT/2)/TILE_SIZE);
@@ -60,18 +60,36 @@ Player = function(){
 	self.coordsBottomRight = [5,5];
 	self.coordsBottomLeft = [5,5];
 	
+    self.image = Img.player;
+    self.width =self.image.width;
+    self.height =self.image.height;
 	
+    self.direction = 'right';
+    
 	self.draw = function() {
-		ctx.save();
-		ctx.fillStyle = self.color;
-		ctx.fillRect(WIDTH/2 - self.width/2, HEIGHT/2 - self.height/2, self.width, self.height);
-		ctx.restore();
+        self.getDrawDirection();
+        ctx.save();
+        if(self.direction === 'left') {
+            ctx.scale(-1,1);
+            ctx.drawImage(self.image, WIDTH/2 *-1 + self.width/2 * -1, HEIGHT/2 - self.height/2);
+        }
+        else {
+           ctx.drawImage(self.image, WIDTH/2 - self.width/2, HEIGHT/2 - self.height/2); 
+        }
+        ctx.restore();
+
 	}
 
+    
+    self.getDrawDirection = function() {
+        if(keyPressed.left || keyPressed.a) 
+            self.direction = 'left';
+        if(keyPressed.right || keyPressed.d) 
+            self.direction = 'right';
+    }
 	self.updatePosition = function(){
 		self.x = WIDTH/2 - player.width/2 - map.x;
 		self.y = HEIGHT/2 - player.height/2 - map.y;
-
 	}
 	
 	return self;	
