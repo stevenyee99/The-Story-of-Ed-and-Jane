@@ -1,12 +1,19 @@
 //  How Collisions work!
 /*
-1.  Get proposed point for each corner.
-    a.  Naming the explicitly will help future debugging!
-2.  For each point, check if its in a collision space
-3.  If yes, do relevant collision checks
-    a.  I.e, bottom right point shouldnt check for a top collision
-    b.  Adjust values as needed
-4.  Calculate final move.
+1.  Based on the key pressed and movement factors, get how much the player
+ Will move (both X and Y).  THis is the deltaX and deltaY!
+2.  For each corner of the player, get the grid space based off
+  the new proposed position it will be in (current + delta)
+3.  Check to see if this position is in a "collision" space
+	a.  I do it this way because other 'collision' objects may enter the space
+4.  If its in a collision space, get the 'block' of whats occupying it
+	a.  Currently its just blocks, but I will add other objects which arent
+	all 32x32
+5.  Check to see if there's actually a collision
+	a.  For all blocks, this will always be true.
+6.  Get how deep te player is in the block.  Set that as the adjustor.
+7.  Set how much the player should actually move
+	a.  Proposed - adjustor
 
 Note:  All x/ys are based on the position from the top left corner of the map, not canvas.
         Sorry future steven!
@@ -72,146 +79,70 @@ var calculateProposedCoords = function(){
 }	
 
 
+//Get 
 
 
-//Get Proposed points for each corner
+//Get Proposed coords for each corner
 
-var getProposedObjectTopRight = function () {
+var getProposedCoordsTopRight = function () {
 	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
 	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
-    return {
-        proposedX : proposedX,
-        proposedY : proposedY,
-        coords : [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)],
-        checkTop : true,
-        checkLeft : false
-    }
-}
-var getProposedObjectBottomRight = function () {
+    return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
+	}
+var getProposedCoordsBottomRight = function () {
 	proposedX = WIDTH/2 + player.width/2 - map.x - deltaX;
 	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
-	return {
-        proposedX : proposedX,
-        proposedY : proposedY,
-        coords : [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)],
-        checkTop : false,
-        checkLeft : false
-    }
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
 }
 
-var getProposedObjectBottomLeft = function () {
+var getProposedCoordsBottomLeft = function () {
 	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
 	proposedY = HEIGHT/2 + player.height/2 - map.y + deltaY;
-	return {
-        proposedX : proposedX,
-        proposedY : proposedY,
-        coords : [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)],
-        checkTop : false,
-        checkLeft : true
-    }
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
 }
-var getProposedObjectTopLeft = function () {
+var getProposedCoordsTopLeft = function () {
 	proposedX = WIDTH/2 - player.width/2 - map.x - deltaX;
 	proposedY = HEIGHT/2 - player.height/2 - map.y + deltaY;
-	return {
-        proposedX : proposedX,
-        proposedY : proposedY,
-        coords : [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)],
-        checkTop : true,
-        checkLeft : true
-    }
+	return [Math.floor((proposedX)/TILE_SIZE),Math.floor((proposedY)/TILE_SIZE)];
 }
 
 
 
 //Check to see if theres a collision
-var isHitOnTop = function (block){ 
+
+var isHit = function (block){
+	if(proposedX  <= block.x + block.width + block.speedX
+	&& proposedX  >= block.x + block.speedX
+	&& proposedY < block.y + block.height + block.speedY
+	&& proposedY > block.y + block.speedY
+	)
+		return true;
+	else
+		return false;
+};
+
+
+var isHitOnSide = function (block){
+	if(proposedX >= block.x + block.speedX
+	&& proposedX <= block.x + block.width + block.speedX
+	&& player.y < block.y + block.height 
+	&& player.y + player.height > block.y
+	)
+		return true;
+	else
+		return false;
+};
+
+var isHitVertical = function (block){ 
 	if (player.x + player.width > block.x + 2
 	&& player.x < block.x + block.width - 2
-	&& proposedY + player.height <= block.y + block.height - block.speedY
-	&& proposedY >= block.y + block.height - block.speedY) {
-		logThis('collision-platform', ('proposed y: ' + proposedY.toString() + '  block: ' + block.y.toString() + '  block speed: ' + block.speedY.toString()));
-        return true;
-    }
+	&& proposedY <= block.y + block.height + block.speedY
+	&& proposedY >= block.y +  block.speedY)
+		return true;
 	else 
 		return false;
 };
 
-var isHitOnBottom = function(block){
-    //logThis('collision-platform', ('proposed y: ' + proposedY.toString() + '  block: ' + block.y.toString() + '  block speed: ' + block.speedY.toString()));
-    try{
-        if(player.x + player.width > block.x + 2
-        && player.x < block.x + block.width - 2
-        && proposedY - player.height < block.y - block.speedY
-        && proposedY >= block.y //Took of the speed here and it works.  not sure why tho.
-          )
-            return true;
-        else 
-            return false;
-    } catch(err){
-        console.log('heres the error block: ', block);
-        throw err; //block is undefined
-    }
-};
-
-var isHitOnRight = function (block){
-	if(proposedX + player.width >= block.x - block.speedX
-	&& proposedX + player.width <= block.x + block.width - block.speedX
-	&& player.y < block.y + block.height  - 2  //The +/- 2 gives the block the ability to slide on top of a surface
-	&& player.y + player.height > block.y + 2  //1 doesn't work for some reason.
-	)
-		return true;
-	else
-		return false;
-};
-
-var isHitOnLeft = function (block){
-	if(proposedX  <= block.x + block.width - block.speedX
-	&& proposedX + player.width >= block.x + block.width - block.speedX
-	&& player.y < block.y + block.height - 2
-	&& player.y + player.height > block.y + 2
-	)
-		return true;
-	else
-		return false;
-};
-
-//Handle collisions
-var handleLeftCollision = function(block) {
-	if (isHitOnLeft(block)){
-		if(!collision.left)
-			collision.leftAdjustor = block.x + block.width - proposedX;
-		collision.left = true;
-	}
-}
-
-var handleRightCollision = function(block) {
-	if (isHitOnRight(block)){
-		if(!collision.right){
-			collision.rightAdjustor = block.x - proposedX;
-		}
-		collision.right = true;
-	}
-}
-
-var handleTopCollision = function(block) {
-	if(isHitOnTop(block)){
-		if(!collision.top){
-			collision.topAdjustor = block.y + block.height - proposedY;
-			}
-		collision.top = true;
-	}
-}
-var handleBottomCollision = function(block) {
-	if(isHitOnBottom(block)){	
-		gravity.isJumping = false;
-		if(!collision.bottom){
-			collision.bottomAdjustor = block.y - proposedY;
-            gravity.jumpStrength = 0;
-		}
-		collision.bottom = true;
-	}	
-}
 
 var getCorrectPlatform = function(xCoord,yCoord){
     var key = (xCoord.toString() + ',' + yCoord.toString());
@@ -267,9 +198,9 @@ var getBlock = function(xCoord,yCoord,gridValue){
 
 //This function takes a coordinate and updates all
 //Collisions with the player
-var updateAllHits = function (proposedObject){
-	var xCoord = proposedObject.coords[0];
-	var yCoord = proposedObject.coords[1];
+var updateAllHits = function (coord, point){
+	var xCoord = coord[0];
+	var yCoord = coord[1];
 	if(yCoord < 0 || yCoord > map.grid.length)
 		console.log("Player is out of bound Vertically.");
 	//This tests to see if the player is entering a collision space
@@ -283,69 +214,96 @@ var updateAllHits = function (proposedObject){
                 console.log(PlatformList);
             }
 		
-        //TODO  Add condition where bottom and right (or any corner combo)
-		//      Doesn't cause a spaz.
-		
-		if(isHitOnBottom(block)){
-			handleBottomCollision(block);
-			handleLeftCollision(block);
-			handleRightCollision(block);
-		}
-		else if(isHitOnTop(block)){
-			handleTopCollision(block);
-			if(!collision.top){
-				handleLeftCollision(block);
-				handleRightCollision(block);
-			}
-		}
-		else {
-			handleLeftCollision(block);
-			handleRightCollision(block);
-			handleBottomCollision(block);
-			handleTopCollision(block);
-		}
+            
+        if(point === 'top-right') {
+            console.log('Collision point: ', point);
+            if(!collision.right) {
+                collision.right = true;
+                collision.rightAdjustor = block.x - proposedX;
+            }
+            if(!collision.top && !collision.bottom && isHitVertical(block)) {
+                collision.topAdjustor = block.y + block.height - proposedY;
+                collision.top = true;
+            }
+        }
+        
+        if(point === 'top-left') {
+            console.log('Collision point: ', point);
+            if(!collision.left) {
+                collision.leftAdjustor = block.x + block.width - proposedX;
+                collision.left = true;
+            }
+            if(!collision.top && !collision.bottom && isHitVertical(block)) {
+                collision.topAdjustor = block.y + block.height - proposedY;
+                collision.top = true;
+            } 
+            
+        }
+        if(point === 'bottom-right') {
+            console.log('Collision point: ', point);
+            if(isHitOnSide(block)) {
+                collision.rightAdjustor = block.x - proposedX;
+                collision.right = true;
+            }
+            if(isHitVertical(block) && gravity.jumpStrength <1) {
+                collision.bottomAdjustor = block.y - proposedY;
+                gravity.jumpStrength = 0;
+                collision.bottom = true;
+                gravity.isJumping = false;
+            }
+            if(!collision.bottom && !collision.right) {
+                collision.rightAdjustor = block.x - proposedX;
+                //collision.bottomAdjustor = block.y - proposedY;
+                collision.right = true;
+            }
+        }
+        if(point === 'bottom-left') {
+            console.log('Collision point: ', point);
+            if(isHitOnSide(block)) {
+                collision.leftAdjustor = block.x + block.width - proposedX;
+                collision.left = true;
+            }
+            //TODO.  Try removing jumpStrength condition. Should work without it
+            if(isHitVertical(block) && gravity.jumpStrength <1) {
+                collision.bottomAdjustor = block.y - proposedY;
+                gravity.jumpStrength = 0;
+                collision.bottom = true;
+                gravity.isJumping = false;
+            } 
+
+            if(!collision.bottom && !collision.left) {
+                collision.leftAdjustor = block.x + block.width - proposedX;
+                //collision.bottomAdjustor = block.y - proposedY;
+                collision.left = true;
+            }
+                
+        }
 	}
 }
 
-
-// check to see if there are any collisions
 var isTouchingPlayer = function() {
-    var proposedTopRight = getProposedObjectTopRight();
-    var proposedBottomRight = getProposedObjectBottomRight();
-    var proposedBottomLeft = getProposedObjectBottomLeft();
-    var proposedTopLeft = getProposedObjectTopLeft();
-    
-    proposedX = proposedTopRight.proposedX;
-    proposedY = proposedTopRight.proposedY;
-	updateAllHits(proposedTopRight);
-    
-    proposedX = proposedTopLeft.proposedX;
-    proposedY = proposedTopLeft.proposedY;
-	updateAllHits(proposedTopLeft);
-    
-    proposedX = proposedBottomLeft.proposedX;
-    proposedY = proposedBottomLeft.proposedY;
-	updateAllHits(proposedBottomLeft);
-    
-    proposedX = proposedBottomRight.proposedX;
-    proposedY = proposedBottomRight.proposedY;
-	updateAllHits(proposedBottomRight);
-	
-}
+
+	updateAllHits(getProposedCoordsBottomRight(), 'bottom-right');
+	updateAllHits(getProposedCoordsBottomLeft(), 'bottom-left');
+	updateAllHits(getProposedCoordsTopLeft(), 'top-left');
+	updateAllHits(getProposedCoordsTopRight(), 'top-right');
+	}
 	
 var calculateFinalMoveCoords = function(){
-    logThis('collision-platform', ('bottom collision: ' + collision.bottom.toString()));
+    //logThis('collision-platform', ('bottom collision: ' + collision.bottom.toString()));
 	if(collision.left && keyPressed.left){
 		finalXMove -= collision.leftAdjustor;
+        logThis('collision-platform', 'left adjustor: ' + collision.leftAdjustor.toString());
 		}
 	if(collision.right && keyPressed.right){
 		finalXMove -= collision.rightAdjustor;
+        logThis('collision-platform', 'right adjustor: ' + collision.rightAdjustor.toString());
 		}
 		
 	if(collision.top){
 		finalYMove -= collision.topAdjustor;  
 		gravity.jumpStrength = 0;
-        logThis('collision-platform', 'top adjustor: ' + collision.topAdjustor.toString());
+        //logThis('collision-platform', 'top adjustor: ' + collision.topAdjustor.toString());
 		}
 	if(collision.bottom){
 		finalYMove -= collision.bottomAdjustor;
@@ -360,6 +318,7 @@ var calculateFinalMoveCoords = function(){
                 }
             }
     }
+    console.log('bottom collision: ',collision.bottom, ' Top collision: ', collision.top, ' Left collision: ', collision.left, ' Right collision: ', collision.right);
     
 	
 }
